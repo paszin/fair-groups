@@ -1,0 +1,82 @@
+# FAIR GROUPS
+
+reset;
+
+# Define options
+option omit_zero_rows 1;
+option randseed'';
+
+
+# Define sets
+set pupils := {0, 1, 2, 3};                               # pupils
+set courses := {0, 1, 2};                             # courses
+set groups := {1, 2};
+
+
+# pupil course assignment as binary
+param assignment {p in pupils, c in courses };
+
+param numberOfCourses {p in pupils};
+
+#############
+
+# Decision variable
+# pupil to course to groups
+var x {p in pupils, c in courses, g in groups} binary;
+# pupil to course
+var pg {p in pupils, g in groups} binary;
+
+
+# the thing with the quetschvariablen
+# courses per slot
+var minPupilsPerGroup integer;
+var maxPupilsPerGroup integer;
+
+# pupils per group
+var minPupilsPerGroupCourse integer;
+var maxPupilsPerGroupCourse integer;
+
+
+### 01 ###
+# Every pupil belongs to exactly one group.
+##########
+# every pupil in one group
+subject to NB1{p in pupils}:
+	sum{g in groups} pg[p, g]= 1;
+
+### 02 ###
+# Every pupil has all courses in one group
+##########
+subject to NB2{p in pupils, g in groups}:
+	sum{c in courses} x[p, c, g] <= numberOfCourses[p] * pg[p, g];
+
+
+### 03 ###
+# Every pupil belongs to exactly one course according to assignment.
+##########
+subject to NB3{p in pupils, c in courses}:
+	x[p, c, 1] + x[p, c, 2] = assignment[p, c];
+
+
+# minimize the spread in groups
+subject to LOWER_BOUND_G{g in groups}: (sum{c in courses, p in pupils} x[p, c, g]) >= minPupilsPerGroup;
+subject to UPPER_BOUND_G{g in groups}: (sum{c in courses, p in pupils} x[p, c, g]) <= maxPupilsPerGroup;
+
+
+# minimize the spread in courses
+subject to LOWER_BOUND_GC{g in groups, c in courses}: (sum{p in pupils} x[p, c, g]) >= minPupilsPerGroupCourse;
+subject to UPPER_BOUND_GC{g in groups, c in courses}: (sum{p in pupils} x[p, c, g]) <= maxPupilsPerGroupCourse;
+
+
+# Define objectives
+
+minimize GROUP_SPREAD: maxPupilsPerGroupCourse - minPupilsPerGroupCourse;
+
+### Solve the problem / find a feasible solution ###
+solve;
+
+
+# Display output
+display x;
+
+#end;
